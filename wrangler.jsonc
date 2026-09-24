@@ -25,7 +25,7 @@
     "VERSION": "dev",
     // Shown to the Internet Archive in the User-Agent header so they can reach you
     // if this tool ever causes them trouble. Use a URL or mailto: address.
-    "CONTACT": "https://github.com/YOUR_GITHUB_USERNAME/tracklist-finder"
+    "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
   },
 
   // Local-only placeholder. `wrangler dev` and tests simulate KV locally.
@@ -44,10 +44,10 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "VERSION": "unset",
-        "CONTACT": "https://github.com/YOUR_GITHUB_USERNAME/tracklist-finder"
+        "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
       },
       // Filled in by `npm run bootstrap`.
-      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_STAGING_KV_ID" }],
+      "kv_namespaces": [{ "binding": "CACHE", "id": "daa7e2ae8e6045a4aa5cbffad1f0ebd5" }],
       "ratelimits": [
         { "name": "CLIENT_LIMITER", "namespace_id": "2101", "simple": { "limit": 30, "period": 60 } },
         { "name": "ARCHIVE_LIMITER", "namespace_id": "2102", "simple": { "limit": 60, "period": 60 } }
@@ -62,10 +62,10 @@
       "vars": {
         "ENVIRONMENT": "production",
         "VERSION": "unset",
-        "CONTACT": "https://github.com/YOUR_GITHUB_USERNAME/tracklist-finder"
+        "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
       },
       // Filled in by `npm run bootstrap`.
-      "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_PRODUCTION_KV_ID" }],
+      "kv_namespaces": [{ "binding": "CACHE", "id": "48232e3545524c1fa6ff01d574533199" }],
       "ratelimits": [
         { "name": "CLIENT_LIMITER", "namespace_id": "3101", "simple": { "limit": 30, "period": 60 } },
         { "name": "ARCHIVE_LIMITER", "namespace_id": "3102", "simple": { "limit": 120, "period": 60 } }
