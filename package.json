@@ -1,0 +1,48 @@
+{
+  "name": "tracklist-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Paste an old 8tracks playlist link, get its tracklist back from the Wayback Machine. Runs on Cloudflare Workers.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live": "RUN_LIVE=1 vitest run test/live",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "types": "wrangler types --strict-vars=false",
+    "types:check": "wrangler types --strict-vars=false --check",
+    "build": "wrangler deploy --dry-run --outdir dist --env production",
+    "check": "npm run lint && npm run typecheck && npm run types:check && npm test && npm run build",
+    "smoke": "node scripts/smoke.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@fontsource/familjen-grotesk": "5.3.0",
+    "@fontsource/gloock": "5.3.0",
+    "@vitest/runner": "4.1.11",
+    "@vitest/snapshot": "4.1.11",
+    "eslint": "10.11.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "4.1.11",
+    "wrangler": "4.136.2"
+  },
+  "overrides": {
+    "@cloudflare/vitest-pool-workers": {
+      "wrangler": "$wrangler",
+      "miniflare": "5.20260921.0-alpha"
+    }
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260921.1": true
+  }
+}

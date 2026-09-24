@@ -1,0 +1,14 @@
+# Response headers for static files (the Worker sets its own for /api/*).
+# The page loads nothing inline and nothing from other sites except archived cover
+# images, so the content security policy can be strict.
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' https://web.archive.org; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

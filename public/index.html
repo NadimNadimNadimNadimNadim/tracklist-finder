@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>8tracks tracklist finder</title>
+<meta name="description" content="Paste a link to an old 8tracks playlist and get its tracklist back from the Wayback Machine.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Get the tracklist from an old 8tracks playlist</h1>
+    <p class="lede">8tracks is gone, but the Wayback Machine kept copies of many of its playlists. Paste a playlist link and this page finds the saved tracklist.</p>
+  </header>
+
+  <form id="form" autocomplete="off" novalidate>
+    <label for="url" class="sr-only">8tracks playlist link</label>
+    <input id="url" name="url" type="text" inputmode="url" spellcheck="false" maxlength="2048" placeholder="8tracks.com/username/playlist-name" required>
+    <button class="primary" id="go" type="submit">Find tracklist</button>
+  </form>
+  <p class="hint">Wayback Machine links and old share links like 8tracks.com/mixes/12345 work too.</p>
+  <div class="chips" id="examples">
+    <span class="label">Try one:</span>
+    <button class="chip" type="button" data-url="https://8tracks.com/madelinerose7/get-on-your-study-grind">get on your study grind!</button>
+    <button class="chip" type="button" data-url="https://8tracks.com/feelgoodplaylists/new-feel-good-indie-july-2011">New Feel Good Indie July 2011</button>
+  </div>
+  <div class="chips" id="recent" hidden></div>
+
+  <div id="status" class="status" role="status" aria-live="polite" hidden>
+    <span class="spinner" aria-hidden="true"></span>
+    <span><strong>Looking this up…</strong><span class="detail">The Wayback Machine can take up to 20 seconds when it's busy.</span></span>
+  </div>
+  <div id="notice" class="notice" role="alert" hidden></div>
+  <section id="result" class="result" aria-live="polite" hidden></section>
+
+  <footer class="footer">
+    <p>Tracklists come from copies the <a href="https://web.archive.org/" rel="noopener">Internet Archive's Wayback Machine</a> saved before 8tracks shut down. This site isn't affiliated with 8tracks or the Internet Archive.</p>
+  </footer>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p class="wrap">This page needs JavaScript to look up playlists.</p></noscript>
+</body>
+</html>

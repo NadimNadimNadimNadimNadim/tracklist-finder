@@ -1,0 +1,65 @@
+name: CI
+
+# Runs on every pull request, and is reused by the deploy workflow.
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Known vulnerabilities
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Generated types are current
+        run: npm run types:check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test a local run
+        run: |
+          npx wrangler dev --port 8787 --ip 127.0.0.1 > wrangler-dev.log 2>&1 &
+          for i in $(seq 1 30); do
+            sleep 2
+            curl -sf -o /dev/null http://127.0.0.1:8787/api/v1/health && break
+          done
+          node scripts/smoke.mjs http://127.0.0.1:8787
+
+      - name: Dev server log
+        if: failure()
+        run: cat wrangler-dev.log || true

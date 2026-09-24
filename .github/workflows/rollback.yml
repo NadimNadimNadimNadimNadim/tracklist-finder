@@ -1,0 +1,63 @@
+name: Rollback
+
+# Put the previous version back. Run it from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which environment to roll back
+        required: true
+        type: choice
+        options: [staging, production]
+      version_id:
+        description: Version to roll back to (leave empty for the previous one)
+        required: false
+        type: string
+      reason:
+        description: Why
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  rollback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Roll back
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET_ENV: ${{ inputs.environment }}
+          VERSION_ID: ${{ inputs.version_id }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ -n "$VERSION_ID" ]; then
+            case "$VERSION_ID" in
+              [0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*-[0-9a-f]*) ;;
+              *) echo "version_id must be a version UUID"; exit 1 ;;
+            esac
+            npx wrangler rollback "$VERSION_ID" --env "$TARGET_ENV" --message "$REASON" --yes
+          else
+            npx wrangler rollback --env "$TARGET_ENV" --message "$REASON" --yes
+          fi
+
+      - name: Smoke test
+        env:
+          URL: ${{ inputs.environment == 'production' && vars.PRODUCTION_URL || vars.STAGING_URL }}
+        run: node scripts/smoke.mjs "$URL" --live
