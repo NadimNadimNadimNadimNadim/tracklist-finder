@@ -12,6 +12,15 @@ import { isSafeMixId, isSafePlaylistPath } from "../domain/input";
  *  - Responses are read with a hard size cap, and every request has a timeout.
  *  - Each lookup has a fixed budget of outbound requests, retries included, well
  *    under Cloudflare's per-request limit.
+ *
+ * Politeness rules (https://archive.org/developers/bots.html):
+ *  - Every request is counted against a service-wide cap first (`permit`).
+ *  - "429 Too Many Requests" is never retried. The lookup ends with
+ *    ARCHIVE_RATE_LIMITED carrying the archive's Retry-After, and ArchiveGuard
+ *    pauses all archive traffic for that long.
+ *  - Server errors are retried with exponential backoff, waiting at least as long
+ *    as any Retry-After asks. A Retry-After longer than we'd wait inside one
+ *    request is treated like a 429.
  */
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -38,6 +47,9 @@ export interface WaybackOptions {
   maxPageBytes?: number;
   maxJsonBytes?: number;
   sleep?: (ms: number) => Promise<void>;
+  /** Asked before every outbound request; false ends the lookup with BUSY. */
+  permit?: () => Promise<boolean>;
+  now?: () => number;
 }
 
 /** Counts outbound requests so one lookup can never make too many. */
@@ -58,8 +70,14 @@ export class RequestBudget {
 }
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-const RETRY_STATUSES = new Set([429, 500, 502, 503, 504, 520, 521, 522, 523, 524]);
+const RETRY_STATUSES = new Set([500, 502, 503, 504, 520, 521, 522, 523, 524]);
 const NOT_ARCHIVED_STATUSES = new Set([404, 410]);
+
+/** Longest wait between retries inside one lookup. A longer Retry-After ends the lookup instead. */
+const MAX_BACKOFF_MS = 4000;
+/** How long to pause when the archive says "slow down" without saying for how long. */
+export const DEFAULT_PAUSE_SECONDS = 60;
+const MAX_PAUSE_SECONDS = 3600;
 
 // A capture of an 8tracks.com address on web.archive.org, raw ("id_") or not.
 const CAPTURE_PATH = /^\/web\/(\d{14})(?:id_)?\/(?:https?:\/\/)?(?:www\.)?8tracks\.com(?::(?:80|443))?(\/[^?#]*)?$/i;
@@ -70,6 +88,46 @@ const unavailable = (internal: string): AppError =>
   new AppError("ARCHIVE_UNAVAILABLE", "The Wayback Machine didn't respond properly. It may be busy or down. Try again in a minute.", {
     internal,
   });
+
+/** The archive has asked this service to wait `seconds` before contacting it again. */
+export function archiveRateLimited(seconds: number, internal: string): AppError {
+  const wait = seconds <= 60 ? "a minute" : `about ${Math.ceil(seconds / 60)} minutes`;
+  return new AppError("ARCHIVE_RATE_LIMITED", `The Wayback Machine has asked this site to slow down. Try again in ${wait}.`, {
+    retryAfterSeconds: seconds,
+    internal,
+  });
+}
+
+const busy = (): AppError =>
+  new AppError("BUSY", "Lots of people are looking up playlists right now. Try again in a minute.", {
+    retryAfterSeconds: 60,
+    internal: "service-wide archive request cap reached",
+  });
+
+// The standard HTTP date form, e.g. "Tue, 01 Sep 2026 12:02:00 GMT". Date.parse alone
+// accepts far too much (it reads "-5" as a year).
+const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+/**
+ * A Retry-After header in whole seconds, clamped to 1..3600. Accepts both forms
+ * the standard allows: a number of seconds, or an HTTP date. Null if absent or
+ * unreadable.
+ */
+export function parseRetryAfter(value: string | null, now: number): number | null {
+  if (value === null) return null;
+  const v = value.trim();
+  let seconds: number;
+  if (/^\d{1,10}$/.test(v)) {
+    seconds = Number(v);
+  } else if (HTTP_DATE.test(v)) {
+    const at = Date.parse(v);
+    if (Number.isNaN(at)) return null;
+    seconds = Math.ceil((at - now) / 1000);
+  } else {
+    return null;
+  }
+  return Math.min(Math.max(seconds, 1), MAX_PAUSE_SECONDS);
+}
 
 /**
  * If `url` is an acceptable capture to fetch, returns the canonical raw ("id_")
@@ -104,6 +162,8 @@ export class WaybackClient {
       maxPageBytes: 3 * 1024 * 1024,
       maxJsonBytes: 1024 * 1024,
       sleep: defaultSleep,
+      permit: async () => true,
+      now: () => Date.now(),
       ...options,
     };
   }
@@ -163,6 +223,7 @@ export class WaybackClient {
   private async fetchWithRetry(url: string): Promise<Response> {
     let problem = "";
     for (let attempt = 0; attempt <= this.o.retries; attempt++) {
+      if (!(await this.o.permit())) throw busy();
       this.o.budget.take();
       let res: Response;
       try {
@@ -177,11 +238,20 @@ export class WaybackClient {
         if (attempt < this.o.retries) await this.o.sleep(backoff(attempt, null));
         continue;
       }
+      if (res.status === 429) {
+        const raw = res.headers.get("retry-after");
+        await discard(res);
+        const seconds = parseRetryAfter(raw, this.o.now()) ?? DEFAULT_PAUSE_SECONDS;
+        throw archiveRateLimited(seconds, `archive returned 429 (retry-after ${raw === null ? "none" : raw.slice(0, 40)})`);
+      }
       if (RETRY_STATUSES.has(res.status)) {
         problem = `status ${res.status}`;
-        const retryAfter = res.headers.get("retry-after");
+        const hinted = parseRetryAfter(res.headers.get("retry-after"), this.o.now());
         await discard(res);
-        if (attempt < this.o.retries) await this.o.sleep(backoff(attempt, retryAfter));
+        if (hinted !== null && hinted * 1000 > MAX_BACKOFF_MS) {
+          throw archiveRateLimited(hinted, `archive returned ${res.status} with retry-after ${hinted}s`);
+        }
+        if (attempt < this.o.retries) await this.o.sleep(backoff(attempt, hinted));
         continue;
       }
       return res;
@@ -190,10 +260,10 @@ export class WaybackClient {
   }
 }
 
-function backoff(attempt: number, retryAfter: string | null): number {
-  const hinted = retryAfter !== null && /^\d{1,3}$/.test(retryAfter) ? Number(retryAfter) * 1000 : 0;
-  const base = 600 * 2 ** attempt;
-  return Math.min(Math.max(base, hinted), 4000);
+/** Exponential backoff, never shorter than the archive's Retry-After (callers ensure that fits under the cap). */
+function backoff(attempt: number, retryAfterSeconds: number | null): number {
+  const base = Math.min(600 * 2 ** attempt, MAX_BACKOFF_MS);
+  return Math.max(base, (retryAfterSeconds ?? 0) * 1000);
 }
 
 async function discard(res: Response): Promise<void> {

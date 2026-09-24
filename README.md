@@ -120,7 +120,7 @@ Workflows:
 
 | Workflow | When | What |
 | --- | --- | --- |
-| `ci.yml` | Every pull request | Lint, types, 209 tests, audit, build, local smoke test |
+| `ci.yml` | Every pull request | Lint, types, 226 tests, audit, build, local smoke test |
 | `deploy.yml` | Push to `main` | CI, deploy staging, smoke it, deploy production, smoke it |
 | `rollback.yml` | Run by hand | Puts the previous version back, then smoke tests |
 | `canary.yml` | Daily | Checks production against the real archive |
@@ -171,6 +171,8 @@ Everything fits in free plans at hobby scale:
 
 - Only playlists whose track file the archive saved can be found. Many were saved in
   the final days before the shutdown, but not all.
+- If the Wayback Machine answers "too many requests", the whole service stops asking it
+  for as long as it says (a minute if it doesn't say). Cached answers still work.
 - Answers are cached for a year, since archived data doesn't change. Lookups that found
   nothing are remembered for six hours only.
 - Track names appear as 8tracks stored them, with garbled accents and HTML codes fixed.

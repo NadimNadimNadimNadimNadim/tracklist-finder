@@ -33,9 +33,11 @@
 
   // Rate limiters. `period` must be 10 or 60 seconds. Limits apply per Cloudflare location.
   // namespace_id values must be unique within your Cloudflare account.
+  // CLIENT_LIMITER counts lookups per visitor. ARCHIVE_LIMITER counts requests to the
+  // Wayback Machine from the whole service (a typical uncached lookup makes 4).
   "ratelimits": [
     { "name": "CLIENT_LIMITER", "namespace_id": "1101", "simple": { "limit": 30, "period": 60 } },
-    { "name": "ARCHIVE_LIMITER", "namespace_id": "1102", "simple": { "limit": 120, "period": 60 } }
+    { "name": "ARCHIVE_LIMITER", "namespace_id": "1102", "simple": { "limit": 60, "period": 60 } }
   ],
 
   "env": {
@@ -50,7 +52,7 @@
       "kv_namespaces": [{ "binding": "CACHE", "id": "daa7e2ae8e6045a4aa5cbffad1f0ebd5" }],
       "ratelimits": [
         { "name": "CLIENT_LIMITER", "namespace_id": "2101", "simple": { "limit": 30, "period": 60 } },
-        { "name": "ARCHIVE_LIMITER", "namespace_id": "2102", "simple": { "limit": 60, "period": 60 } }
+        { "name": "ARCHIVE_LIMITER", "namespace_id": "2102", "simple": { "limit": 30, "period": 60 } }
       ]
     },
     "production": {
@@ -68,7 +70,7 @@
       "kv_namespaces": [{ "binding": "CACHE", "id": "48232e3545524c1fa6ff01d574533199" }],
       "ratelimits": [
         { "name": "CLIENT_LIMITER", "namespace_id": "3101", "simple": { "limit": 30, "period": 60 } },
-        { "name": "ARCHIVE_LIMITER", "namespace_id": "3102", "simple": { "limit": 120, "period": 60 } }
+        { "name": "ARCHIVE_LIMITER", "namespace_id": "3102", "simple": { "limit": 60, "period": 60 } }
       ]
     }
   }

@@ -8,7 +8,7 @@ import { ArchiveLookup } from "./services/lookup";
 import type { Lookup } from "./services/lookup";
 import { CachingLookup, EdgeCache, KvCache } from "./services/cache";
 import type { ResultCache } from "./services/cache";
-import { ArchiveGuard, BindingLimiter, allowAll } from "./services/rate-limit";
+import { ArchiveGuard, ArchivePause, BindingLimiter, allowAll } from "./services/rate-limit";
 import type { Limiter } from "./services/rate-limit";
 import { applySecurityHeaders, errorResponse, json } from "./http/responses";
 
@@ -64,18 +64,25 @@ export function clientKey(ip: string | null): string {
 export function createApp(deps: AppDeps) {
   const now = deps.now ?? (() => Date.now());
   const makeLogger = deps.makeLogger ?? consoleLogger;
+  // Lives as long as the isolate, so a pause the archive asked for applies to every request it handles.
+  const archivePause = { until: 0 };
 
   const limiter = (binding: RateLimit | undefined, name: string, log: Logger): Limiter =>
     binding ? new BindingLimiter(binding, log, name) : allowAll;
 
   function buildLookup(ctx: RequestContext): Lookup {
+    // One service-wide count of requests to the archive, checked before each one.
+    const archiveCap = limiter(ctx.env.ARCHIVE_LIMITER, "archive", ctx.log);
     const wayback = new WaybackClient({
       fetch: deps.fetch,
       userAgent: ctx.config.userAgent,
       budget: new RequestBudget(OUTBOUND_BUDGET),
+      permit: () => archiveCap.allow("wayback"),
+      now,
       ...(deps.sleep ? { sleep: deps.sleep } : {}),
     });
-    const guarded = new ArchiveGuard(new ArchiveLookup(wayback), limiter(ctx.env.ARCHIVE_LIMITER, "archive", ctx.log));
+    const pause = new ArchivePause(archivePause, ctx.env.CACHE, ctx.log, now);
+    const guarded = new ArchiveGuard(new ArchiveLookup(wayback), pause);
     const tiers: ResultCache[] = [];
     const edge = deps.edgeCache?.() ?? null;
     if (edge) tiers.push(new EdgeCache(edge));

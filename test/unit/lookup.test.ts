@@ -97,12 +97,18 @@ describe("ArchiveLookup", () => {
     await expect(run(archive, "432459")).rejects.toMatchObject({ code: "TRACKS_NOT_ARCHIVED" });
   });
 
-  it("retries after 'too many requests', then succeeds", async () => {
+  it("stops at 'too many requests' instead of retrying", async () => {
+    const archive = studyArchive().override(() => new Response("slow down", { status: 429, headers: { "Retry-After": "1" } }));
+    await expect(run(archive, STUDY_URL)).rejects.toMatchObject({ code: "ARCHIVE_RATE_LIMITED", retryAfterSeconds: 1 });
+    expect(archive.calls).toHaveLength(1);
+  });
+
+  it("retries a server error, then succeeds", async () => {
     let first = true;
     const archive = studyArchive().override(() => {
       if (!first) return undefined;
       first = false;
-      return new Response("slow down", { status: 429, headers: { "Retry-After": "1" } });
+      return new Response("hiccup", { status: 502 });
     });
     const { result } = await run(archive, STUDY_URL);
     expect(result.tracks).toHaveLength(19);
