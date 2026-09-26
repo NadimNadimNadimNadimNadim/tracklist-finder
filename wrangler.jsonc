@@ -25,7 +25,7 @@
     "VERSION": "dev",
     // Shown to the Internet Archive in the User-Agent header so they can reach you
     // if this tool ever causes them trouble. Use a URL or mailto: address.
-    "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
+    "CONTACT": "dev.prefix027@passmail.net"
   },
 
   // Local-only placeholder. `wrangler dev` and tests simulate KV locally.
@@ -46,7 +46,7 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "VERSION": "unset",
-        "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
+        "CONTACT": "dev.prefix027@passmail.net"
       },
       // Filled in by `npm run bootstrap`.
       "kv_namespaces": [{ "binding": "CACHE", "id": "daa7e2ae8e6045a4aa5cbffad1f0ebd5" }],
@@ -64,7 +64,7 @@
       "vars": {
         "ENVIRONMENT": "production",
         "VERSION": "unset",
-        "CONTACT": "https://github.com/NadimNadimNadimNadimNadim/tracklist-finder"
+        "CONTACT": "dev.prefix027@passmail.net"
       },
       // Filled in by `npm run bootstrap`.
       "kv_namespaces": [{ "binding": "CACHE", "id": "48232e3545524c1fa6ff01d574533199" }],
