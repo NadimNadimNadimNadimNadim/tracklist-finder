@@ -1,0 +1,29 @@
+name: Dependabot auto-merge
+
+# Turns on auto-merge for each Dependabot pull request. GitHub then squash-merges it
+# once every required check on main passes, and deletes the branch. Needs, in the
+# repository settings: "Allow auto-merge", "Automatically delete head branches", and a
+# ruleset on main requiring the CI, CodeQL and dependency review checks. Without the
+# ruleset this job fails and nothing is merged.
+#
+# Merges made this way don't trigger deploy.yml; the update ships with the next push.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  enable:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

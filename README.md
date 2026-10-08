@@ -115,6 +115,10 @@ In the repository settings:
 - **Variables**: `STAGING_URL` and `PRODUCTION_URL`, the addresses to smoke test.
 - **Environments**: create `staging` and `production`. Add yourself as a required
   reviewer on `production` if you want to approve each release by hand.
+- **Dependabot auto-merge** (General → Pull Requests): turn on "Allow auto-merge" and
+  "Automatically delete head branches". Then add a branch ruleset for `main` (Rules →
+  Rulesets) that requires the status checks `Lint, types, tests, build`, `analyze` and
+  `review`, with Repository admin on the bypass list so you can still push directly.
 
 Workflows:
 
@@ -126,6 +130,7 @@ Workflows:
 | `canary.yml` | Daily | Checks production against the real archive |
 | `codeql.yml` | Push, PR, weekly | GitHub's security scanner |
 | `dependency-review.yml` | Every pull request | Blocks dependencies with known high-severity problems |
+| `dependabot-auto-merge.yml` | Dependabot pull requests | Merges the update once required checks pass |
 
 Keep the repository public and all of this is free. On a free account, CodeQL,
 dependency review and required reviewers need a public repository.
