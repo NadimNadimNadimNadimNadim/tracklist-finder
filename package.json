@@ -30,19 +30,21 @@
     "@vitest/runner": "4.1.11",
     "@vitest/snapshot": "4.1.11",
     "eslint": "10.11.0",
+    "miniflare": "5.20261006.0-alpha",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "vitest": "4.1.11",
-    "wrangler": "4.136.2"
+    "wrangler": "4.148.0"
   },
   "overrides": {
     "@cloudflare/vitest-pool-workers": {
       "wrangler": "$wrangler",
-      "miniflare": "5.20260921.0-alpha"
-    }
+      "miniflare": "$miniflare"
+    },
+    "sharp": "0.35.5"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
-    "workerd@1.20260921.1": true
+    "workerd@1.20261006.1": true
   }
 }
